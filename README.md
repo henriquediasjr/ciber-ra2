@@ -9,12 +9,12 @@ Arquivo: `contador.py`. O incremento é feito em 3 passos (ler, somar, escrever)
 
 | Versão | Execução | Esperado | Obtido | Tempo |
 |---|---|---|---|---|
-| Sem sincronização | 1 | 1.600.000 | 200.013 | 2,21 s |
-| Sem sincronização | 2 | 1.600.000 | 200.000 | 2,14 s |
-| Sem sincronização | 3 | 1.600.000 | 200.044 | 7,14 s |
-| Semáforo binário | 1 | 1.600.000 | 1.600.000 | 17,84 s |
-| Semáforo binário | 2 | 1.600.000 | 1.600.000 | 17,99 s |
-| Semáforo binário | 3 | 1.600.000 | 1.600.000 | 17,30 s |
+| Sem sincronização | 1 | 1.600.000 | 200.064 | 8,51 s |
+| Sem sincronização | 2 | 1.600.000 | 200.017 | 7,58 s |
+| Sem sincronização | 3 | 1.600.000 | 200.003 | 8,40 s |
+| Semáforo binário | 1 | 1.600.000 | 1.600.000 | 22,86 s |
+| Semáforo binário | 2 | 1.600.000 | 1.600.000 | 22,31 s |
+| Semáforo binário | 3 | 1.600.000 | 1.600.000 | 18,25 s |
 
 ### Discussão
 - **Por que perde incrementos:** `count = count + 1` não é atômico (ler → somar → escrever). Duas threads leem o mesmo
@@ -22,7 +22,7 @@ Arquivo: `contador.py`. O incremento é feito em 3 passos (ler, somar, escrever)
   e a escrita, quase todas as atualizações são sobrescritas.
 - **Por que o semáforo corrige:** com 1 permissão, só uma thread por vez executa a seção crítica (exclusão mútua). O
   ler-somar-escrever vira indivisível, então o resultado é sempre T×M.
-- **Trade-off de throughput:** a versão correta foi ~3–8× mais lenta: as threads serializam na seção crítica e ainda há o
+- **Trade-off de throughput:** a versão correta foi ~2,5–3× mais lenta: as threads serializam na seção crítica e ainda há o
   custo de bloquear/acordar threads (troca de contexto). Correção custa desempenho. O `threading.Semaphore` do Python
   não garante justiça FIFO (o `Semaphore(fair=true)` do Java sim, ao custo de ainda menos throughput).
 - **Visibilidade/ordenação:** o `release()` de uma thread *acontece-antes* do `acquire()` seguinte de outra (happens-before
@@ -36,16 +36,16 @@ Arquivo: `deadlock.py`. T1 pega A depois B; T2 pega B depois A, com `sleep(50ms)
 
 ### Log da versão que trava (`python3 deadlock.py`)
 ```
-[ 0.00s] T1 tentando A
-[ 0.00s] T2 tentando B
-[ 0.00s] T1 ADQUIRIU A
-[ 0.00s] T2 ADQUIRIU B
-[ 0.05s] T2 tentando A
-[ 0.05s] T1 tentando B
-[ 6.01s] DEADLOCK! threads travadas (threading.enumerate):
-    MainThread alive= True
-    Thread-1 (tarefa) alive= True
-    Thread-2 (tarefa) alive= True
+[0.00s] T1 quer o lock A
+[0.00s] T2 quer o lock B
+[0.00s] T1 pegou o lock A
+[0.00s] T2 pegou o lock B
+[0.05s] T1 quer o lock B
+[0.05s] T2 quer o lock A
+[6.01s] DEADLOCK! Essas threads ainda estão vivas, presas esperando um lock:
+    MainThread
+    Thread-1 (trabalhar)
+    Thread-2 (trabalhar)
 ```
 Nunca aparece "T1 concluiu" nem "T2 concluiu": as duas threads continuam vivas, bloqueadas para sempre.
 
@@ -58,13 +58,17 @@ Nunca aparece "T1 concluiu" nem "T2 concluiu": as duas threads continuam vivas, 
 ### Correção (`python3 deadlock.py corrigido`)
 Ambas as threads sempre adquirem **A antes de B**:
 ```
-[ 0.00s] T1 ADQUIRIU A
-[ 0.05s] T1 ADQUIRIU B
-[ 0.05s] T1 concluiu
-[ 0.05s] T2 ADQUIRIU A
-[ 0.11s] T2 ADQUIRIU B
-[ 0.11s] T2 concluiu
-[ 0.11s] Todas as threads terminaram. Sem deadlock.
+[0.00s] T1 quer o lock A
+[0.00s] T1 pegou o lock A
+[0.00s] T2 quer o lock A
+[0.05s] T1 quer o lock B
+[0.05s] T1 pegou o lock B
+[0.05s] T1 concluiu!
+[0.05s] T2 pegou o lock A
+[0.11s] T2 quer o lock B
+[0.11s] T2 pegou o lock B
+[0.11s] T2 concluiu!
+[0.11s] Todo mundo terminou, sem deadlock.
 ```
 Condição quebrada: **espera circular**. Com ordem global, não existe ciclo no grafo de espera: quem pegou A nunca
 espera por alguém que segura B e quer A.
