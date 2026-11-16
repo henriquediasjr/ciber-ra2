@@ -1,6 +1,67 @@
-# Partes 2 e 3 — Threads, semáforos e deadlock (Python)
+# TDE — Programação Concorrente (Python)
 
-Rodar: `python3 contador.py`, `python3 deadlock.py` e `python3 deadlock.py corrigido`.
+**Integrantes do grupo**
+
+- João Vitor Lima Cecilio
+- Henrique Dias
+
+[Vídeo da apresentação](https://www.youtube.com/watch?v=yQuWZgt2R5g)
+
+## Como rodar
+
+No Windows, abra um terminal na pasta do projeto e escolha o comando da parte que quer testar.
+
+```powershell
+py filosofos.py ingenuo
+py filosofos.py corrigido
+py contador.py
+py deadlock.py
+py deadlock.py corrigido
+```
+
+No Linux ou macOS, use `python3` no lugar de `py`.
+
+## Parte 1 — Jantar dos Filósofos
+
+### Versão ingênua
+
+Cada filósofo pega um garfo e segura ele enquanto espera o segundo. Como o segundo garfo está com o vizinho, a espera forma um círculo e os cinco ficam bloqueados.
+
+```text
+Filósofo 4 esperando o garfo 4.
+Filósofo 2 esperando o garfo 2.
+Filósofo 0 esperando o garfo 0.
+Filósofo 3 esperando o garfo 3.
+Filósofo 1 esperando o garfo 1.
+Deadlock demonstrado. Threads ainda vivas: 5/5.
+```
+
+### Versão corrigida com garçom
+
+O garçom entrega os dois garfos juntos quando chega a vez do filósofo e os dois estão livres. Isso quebra a condição de **manter e esperar**, porque quem está esperando ainda está de mãos vazias. Cada novo pedido entra no fim da fila, dando vez a quem já estava esperando.
+
+### Pseudocódigo da correção
+
+```text
+Para cada filósofo, repetir três vezes
+    Pensar e entrar no fim da fila
+    Esperar a vez e os dois garfos ficarem livres
+    Reservar os dois garfos e sair da fila
+    Comer
+    Devolver os dois garfos e avisar quem está esperando
+```
+
+No teste, cada filósofo chegou à terceira refeição, totalizando 15 refeições. Estas são as linhas da última refeição de cada um.
+
+```text
+Filósofo 0 comendo (refeição 3) com os garfos 4 e 0.
+Filósofo 2 comendo (refeição 3) com os garfos 1 e 2.
+Filósofo 1 comendo (refeição 3) com os garfos 0 e 1.
+Filósofo 4 comendo (refeição 3) com os garfos 3 e 4.
+Filósofo 3 comendo (refeição 3) com os garfos 2 e 3.
+Fim da versão corrigida.
+```
+
 
 ## Parte 2 — Contador concorrente (T=8 threads, M=200.000, esperado = 1.600.000)
 
